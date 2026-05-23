@@ -1,124 +1,158 @@
-use iced::{
-    button, executor, text_input, Application, Button, Column, Command, Container, Element,
-    Length, Settings, Text, TextInput,
-};
+use ale_core::{AleEngine, AleEngineFactory};
+use iced::widget::{button, column, container, text};
+use iced::{Alignment, Element, Length, Task};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub fn main() -> iced::Result {
-    AleApp::run(Settings::default())
+    iced::application("Ale, My Eyes!", AleApp::update, AleApp::view)
+        .subscription(AleApp::subscription)
+        .run()
 }
 
-#[derive(Default)]
 struct AleApp {
+    engine: Arc<Mutex<AleEngine>>,
     status: String,
-    transcribe_button: button::State,
-    synthesize_button: button::State,
-    describe_button: button::State,
-    text_input: text_input::State,
-    text_value: String,
+    result: String,
+    is_recording: bool,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
-    TranscribePressed,
-    SynthesizePressed,
-    DescribePressed,
-    TextChanged(String),
+    ToggleRecording,
+    DescribeImage,
+    ClearResult,
+    StatusUpdated(String),
+    ResultUpdated(String),
 }
 
-impl Application for AleApp {
-    type Executor = executor::Default;
-    type Message = Message;
-    type Flags = ();
+impl AleApp {
+    fn new() -> (Self, Task<Message>) {
+        let engine = Arc::new(Mutex::new(
+            AleEngineFactory::create_default().expect("Failed to create engine"),
+        ));
 
-    fn new(_flags: ()) -> (Self, Command<Message>) {
         (
             Self {
-                status: "Ready".to_string(),
-                ..Default::default()
+                engine,
+                status: "就绪".to_string(),
+                result: String::new(),
+                is_recording: false,
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
-    fn title(&self) -> String {
-        String::from("Ale, My Eyes!")
-    }
-
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::TranscribePressed => {
-                self.status = "Transcribing...".to_string();
-                // TODO: 实现转录功能
+            Message::ToggleRecording => {
+                self.is_recording = !self.is_recording;
+                if self.is_recording {
+                    self.status = "正在聆听...".to_string();
+                } else {
+                    self.status = "处理中...".to_string();
+                    // 模拟处理
+                    self.result = "这是一条语音识别结果示例".to_string();
+                    self.status = "就绪".to_string();
+                }
             }
-            Message::SynthesizePressed => {
-                self.status = "Synthesizing...".to_string();
-                // TODO: 实现合成功能
+            Message::DescribeImage => {
+                self.status = "处理中...".to_string();
+                // 模拟处理
+                self.result = "这是一张示例图片的描述".to_string();
+                self.status = "就绪".to_string();
             }
-            Message::DescribePressed => {
-                self.status = "Describing...".to_string();
-                // TODO: 实现描述功能
+            Message::ClearResult => {
+                self.result.clear();
             }
-            Message::TextChanged(value) => {
-                self.text_value = value;
+            Message::StatusUpdated(status) => {
+                self.status = status;
+            }
+            Message::ResultUpdated(result) => {
+                self.result = result;
             }
         }
-        Command::none()
+        Task::none()
     }
 
-    fn view(&mut self) -> Element<Message> {
-        let title = Text::new("Ale, My Eyes!")
-            .size(30)
-            .width(Length::Fill);
-
-        let status = Text::new(&self.status)
-            .size(16)
-            .width(Length::Fill);
-
-        let text_input = TextInput::new(
-            &mut self.text_input,
-            "Enter text to synthesize...",
-            &self.text_value,
-            Message::TextChanged,
+    fn view(&self) -> Element<Message> {
+        let status_card = container(
+            column![
+                text("系统状态").size(20),
+                text(&self.status).size(16),
+            ]
+            .spacing(8),
         )
-        .padding(10)
-        .size(16);
+        .padding(16)
+        .style(container::rounded_box);
 
-        let transcribe_button = Button::new(
-            &mut self.transcribe_button,
-            Text::new("Transcribe Audio"),
+        let voice_button = button(
+            text(if self.is_recording {
+                "停止"
+            } else {
+                "开始录音"
+            })
+            .size(16),
         )
-        .padding(10)
-        .on_press(Message::TranscribePressed);
+        .padding(20)
+        .style(if self.is_recording {
+            button::danger
+        } else {
+            button::primary
+        })
+        .on_press(Message::ToggleRecording);
 
-        let synthesize_button = Button::new(
-            &mut self.synthesize_button,
-            Text::new("Synthesize Text"),
-        )
-        .padding(10)
-        .on_press(Message::SynthesizePressed);
+        let describe_button = button(text("上传图像并描述").size(16))
+            .padding(16)
+            .style(button::secondary)
+            .on_press(Message::DescribeImage);
 
-        let describe_button = Button::new(
-            &mut self.describe_button,
-            Text::new("Describe Image"),
-        )
-        .padding(10)
-        .on_press(Message::DescribePressed);
+        let result_card = if !self.result.is_empty() {
+            container(
+                column![
+                    text("识别结果").size(20),
+                    text(&self.result).size(16),
+                    button(text("清除结果").size(14))
+                        .padding(8)
+                        .style(button::text)
+                        .on_press(Message::ClearResult),
+                ]
+                .spacing(8),
+            )
+            .padding(16)
+            .style(container::rounded_box)
+            .into()
+        } else {
+            container(text("")).into()
+        };
 
-        let content = Column::new()
-            .spacing(20)
-            .push(title)
-            .push(status)
-            .push(text_input)
-            .push(transcribe_button)
-            .push(synthesize_button)
-            .push(describe_button);
+        let content = column![
+            status_card,
+            column![
+                text("语音交互").size(20),
+                voice_button,
+                text("支持中英文语音识别").size(14),
+            ]
+            .spacing(8)
+            .align_x(Alignment::Center),
+            column![text("图像描述").size(20), describe_button,]
+                .spacing(8)
+                .align_x(Alignment::Center),
+            result_card,
+        ]
+        .spacing(24)
+        .padding(24)
+        .align_x(Alignment::Center);
 
-        Container::new(content)
+        container(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x()
             .center_y()
-            .padding(20)
             .into()
+    }
+
+    fn subscription(&self) -> Task<Message> {
+        Task::none()
     }
 }
