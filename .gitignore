@@ -1,0 +1,38 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.apk
+*.aab
+
+# Models
+models/downloaded/
+*.bin
+*.onnx
+*.gguf
+
+# Config
+config/config.json
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/

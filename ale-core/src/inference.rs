@@ -1,0 +1,283 @@
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
+use crate::{AleError, Result};
+
+/// 设备性能等级
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum DevicePerformance {
+    /// 低端设备 (联发科/赛扬, 4GB内存)
+    Low,
+    /// 中端设备 (i5/Ryzen5, 8GB内存)
+    Medium,
+    /// 高端设备 (i7/Ryzen7, 16GB+内存)
+    High,
+}
+
+/// 网络状态
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum NetworkStatus {
+    /// 离线
+    Offline,
+    /// 弱网 (高延迟/低带宽)
+    Weak,
+    /// 正常网络
+    Normal,
+    /// 高速网络
+    Fast,
+}
+
+/// 推理模式
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum InferenceMode {
+    /// 仅本地推理
+    LocalOnly,
+    /// 仅云端推理
+    CloudOnly,
+    /// 自适应 (根据设备和网络自动选择)
+    Adaptive,
+}
+
+/// 任务复杂度
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum TaskComplexity {
+    /// 简单任务 (基础语音识别、简单描述)
+    Simple,
+    /// 中等任务 (多语言识别、详细描述)
+    Medium,
+    /// 复杂任务 (复杂推理、高质量生成)
+    Complex,
+}
+
+/// 推理配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceConfig {
+    pub mode: InferenceMode,
+    pub device_performance: DevicePerformance,
+    pub network_status: NetworkStatus,
+    pub prefer_cloud: bool,
+    pub timeout: Duration,
+}
+
+impl Default for InferenceConfig {
+    fn default() -> Self {
+        Self {
+            mode: InferenceMode::Adaptive,
+            device_performance: DevicePerformance::Medium,
+            network_status: NetworkStatus::Normal,
+            prefer_cloud: true,
+            timeout: Duration::from_secs(30),
+        }
+    }
+}
+
+/// 推理结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceResult<T> {
+    pub data: T,
+    pub mode_used: InferenceMode,
+    pub latency: Duration,
+    pub tokens_used: Option<usize>,
+}
+
+/// 自适应推理引擎
+pub struct AdaptiveInference {
+    config: InferenceConfig,
+    cloud_api: Option<Box<dyn crate::cloud::CloudApi>>,
+}
+
+impl AdaptiveInference {
+    pub fn new(config: InferenceConfig) -> Self {
+        Self {
+            config,
+            cloud_api: None,
+        }
+    }
+    
+    /// 设置云端API
+    pub fn set_cloud_api(&mut self, api: Box<dyn crate::cloud::CloudApi>) {
+        self.cloud_api = Some(api);
+    }
+    
+    /// 检测设备性能
+    pub async fn detect_device_performance() -> DevicePerformance {
+        // 这里可以添加实际的设备性能检测逻辑
+        // 例如：检查CPU核心数、内存大小、GPU可用性等
+        
+        // 简化实现：返回默认值
+        DevicePerformance::Medium
+    }
+    
+    /// 检测网络状态
+    pub async fn detect_network_status() -> NetworkStatus {
+        // 这里可以添加实际的网络状态检测逻辑
+        // 例如：ping测试、带宽测试等
+        
+        // 简化实现：假设正常网络
+        NetworkStatus::Normal
+    }
+    
+    /// 选择推理模式
+    fn select_inference_mode(&self, task_complexity: TaskComplexity) -> InferenceMode {
+        match self.config.mode {
+            InferenceMode::LocalOnly => InferenceMode::LocalOnly,
+            InferenceMode::CloudOnly => InferenceMode::CloudOnly,
+            InferenceMode::Adaptive => {
+                // 根据任务复杂度、设备性能、网络状态选择
+                match task_complexity {
+                    TaskComplexity::Simple => {
+                        // 简单任务优先使用云端
+                        if self.cloud_api.is_some() {
+                            InferenceMode::CloudOnly
+                        } else {
+                            InferenceMode::LocalOnly
+                        }
+                    }
+                    TaskComplexity::Medium => {
+                        // 中等任务根据网络状态选择
+                        match self.config.network_status {
+                            NetworkStatus::Offline => InferenceMode::LocalOnly,
+                            NetworkStatus::Weak => InferenceMode::LocalOnly,
+                            _ => {
+                                if self.config.prefer_cloud {
+                                    InferenceMode::CloudOnly
+                                } else {
+                                    InferenceMode::LocalOnly
+                                }
+                            }
+                        }
+                    }
+                    TaskComplexity::Complex => {
+                        // 复杂任务优先使用云端
+                        match self.config.network_status {
+                            NetworkStatus::Offline => {
+                                // 离线时只能使用本地
+                                InferenceMode::LocalOnly
+                            }
+                            _ => InferenceMode::CloudOnly,
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /// 语音识别推理
+    pub async fn transcribe(&self, audio_data: &[u8]) -> Result<InferenceResult<String>> {
+        let start_time = Instant::now();
+        
+        // 选择推理模式
+        let mode = self.select_inference_mode(TaskComplexity::Simple);
+        
+        let result = match mode {
+            InferenceMode::LocalOnly => {
+                // 本地推理（需要本地模型）
+                return Err(AleError::Other(anyhow::anyhow!("Local inference not available")));
+            }
+            InferenceMode::CloudOnly | InferenceMode::Adaptive => {
+                // 云端推理
+                let cloud_api = self.cloud_api.as_ref()
+                    .ok_or(AleError::NotInitialized("Cloud API"))?;
+                
+                let response = cloud_api.transcribe(audio_data).await?;
+                response.content
+            }
+        };
+        
+        let latency = start_time.elapsed();
+        
+        Ok(InferenceResult {
+            data: result,
+            mode_used: mode,
+            latency,
+            tokens_used: None,
+        })
+    }
+    
+    /// 图像描述推理
+    pub async fn describe_image(&self, image_data: &[u8]) -> Result<InferenceResult<String>> {
+        let start_time = Instant::now();
+        
+        // 选择推理模式
+        let mode = self.select_inference_mode(TaskComplexity::Complex);
+        
+        let result = match mode {
+            InferenceMode::LocalOnly => {
+                // 本地推理（需要本地模型）
+                return Err(AleError::Other(anyhow::anyhow!("Local inference not available")));
+            }
+            InferenceMode::CloudOnly | InferenceMode::Adaptive => {
+                // 云端推理
+                let cloud_api = self.cloud_api.as_ref()
+                    .ok_or(AleError::NotInitialized("Cloud API"))?;
+                
+                let response = cloud_api.vision(image_data, "请描述这张图片的内容").await?;
+                response.content
+            }
+        };
+        
+        let latency = start_time.elapsed();
+        
+        Ok(InferenceResult {
+            data: result,
+            mode_used: mode,
+            latency,
+            tokens_used: None,
+        })
+    }
+    
+    /// 文本生成推理
+    pub async fn generate(&self, prompt: &str) -> Result<InferenceResult<String>> {
+        let start_time = Instant::now();
+        
+        // 选择推理模式
+        let mode = self.select_inference_mode(TaskComplexity::Medium);
+        
+        let result = match mode {
+            InferenceMode::LocalOnly => {
+                // 本地推理（需要本地模型）
+                return Err(AleError::Other(anyhow::anyhow!("Local inference not available")));
+            }
+            InferenceMode::CloudOnly | InferenceMode::Adaptive => {
+                // 云端推理
+                let cloud_api = self.cloud_api.as_ref()
+                    .ok_or(AleError::NotInitialized("Cloud API"))?;
+                
+                let messages = vec![crate::cloud::CloudMessage {
+                    role: "user".to_string(),
+                    content: prompt.to_string(),
+                }];
+                
+                let response = cloud_api.chat(messages).await?;
+                response.content
+            }
+        };
+        
+        let latency = start_time.elapsed();
+        
+        Ok(InferenceResult {
+            data: result,
+            mode_used: mode,
+            latency,
+            tokens_used: None,
+        })
+    }
+}
+
+/// 语音识别推理
+#[async_trait]
+pub trait AsrInference: Send + Sync {
+    async fn transcribe(&self, audio_data: &[u8]) -> Result<InferenceResult<String>>;
+}
+
+/// 图像描述推理
+#[async_trait]
+pub trait VlmInference: Send + Sync {
+    async fn describe_image(&self, image_data: &[u8]) -> Result<InferenceResult<String>>;
+}
+
+/// 文本生成推理
+#[async_trait]
+pub trait LlmInference: Send + Sync {
+    async fn generate(&self, prompt: &str) -> Result<InferenceResult<String>>;
+}

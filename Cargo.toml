@@ -1,0 +1,41 @@
+[workspace]
+members = [
+    "ale-core",
+    "ale-server",
+    "ale-cli",
+    "ale-gui",
+]
+resolver = "2"
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+hyper = { version = "1", features = ["full"] }
+mime = "0.3"
+bytes = "1"
+image = "0.25"
+whisper-rs = "0.10"
+tts = "0.25"
+ort = { version = "2.0.0-rc.12", features = ["load-dynamic"] }
+ndarray = "0.15"
+tokio-stream = "0.1"
+futures = "0.3"
+async-stream = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+base64 = "0.22"
+rust-embed = "8"
+mime_guess = "2"
+walkdir = "2"
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.11"
+log = "0.4"
+async-trait = "0.1"

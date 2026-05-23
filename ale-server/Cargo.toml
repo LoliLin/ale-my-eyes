@@ -1,0 +1,31 @@
+[package]
+name = "ale-server"
+version = "0.1.0"
+edition = "2021"
+description = "Backend server for Ale, My Eyes!"
+license = "MIT"
+
+[dependencies]
+ale-core = { path = "../ale-core" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+hyper = { version = "1", features = ["full"] }
+mime = "0.3"
+bytes = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+rust-embed = "8"
+mime_guess = "2"
+walkdir = "2"
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.11"
+log = "0.4"
