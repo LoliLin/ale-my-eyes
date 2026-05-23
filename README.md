@@ -287,7 +287,7 @@ println!("图像描述: {}", description);
 
 - **项目主页**: [https://github.com/ale-my-eyes/ale-my-eyes](https://github.com/ale-my-eyes/ale-my-eyes)
 - **问题反馈**: [GitHub Issues](https://github.com/ale-my-eyes/ale-my-eyes/issues)
-- **邮箱**: contact@ale-my-eyes.com
+- **邮箱**: erika@risnordev.org
 
 ## 🎉 更新日志
 
