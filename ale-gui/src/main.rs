@@ -242,7 +242,11 @@ impl AleApp {
                     return Task::none();
                 };
 
-                let recorder = self.recorder.take().expect("recording state checked");
+                let Some(recorder) = self.recorder.take() else {
+                    self.status = AppStatus::Error("录音状态丢失，请重新开始录音".to_string());
+                    self.recording_started = None;
+                    return Task::none();
+                };
                 self.recording_started = None;
                 let audio = match recorder.into_wav_bytes() {
                     Ok(audio) => audio,

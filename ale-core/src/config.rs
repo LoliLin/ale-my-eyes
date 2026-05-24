@@ -113,25 +113,13 @@ impl Default for UiConfig {
 }
 
 /// 应用配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppConfig {
     pub cloud_api: CloudApiConfig,
     pub models: ModelsConfig,
     pub inference: InferenceConfig,
     pub audio: AudioConfig,
     pub ui: UiConfig,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            cloud_api: CloudApiConfig::default(),
-            models: ModelsConfig::default(),
-            inference: InferenceConfig::default(),
-            audio: AudioConfig::default(),
-            ui: UiConfig::default(),
-        }
-    }
 }
 
 /// 配置管理器

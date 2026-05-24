@@ -178,12 +178,10 @@ fn image_error(status: StatusCode, error: String) -> (StatusCode, Json<ImageDesc
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let engine = AleEngineFactory::create_default()
-        .await
-        .expect("failed to initialize AleEngine");
+    let engine = AleEngineFactory::create_default().await?;
     let state = AppState {
         engine: Arc::new(Mutex::new(engine)),
     };
@@ -200,6 +198,8 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     tracing::info!("Starting server on {}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }

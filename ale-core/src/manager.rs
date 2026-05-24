@@ -268,7 +268,7 @@ impl SmartModelManager {
 
             // 下载模型
             let path = self.downloader.download_model(&model_id).await?;
-            downloaded.push(path);
+            downloaded.push(path.clone());
 
             // 更新状态
             self.update_model_status(
@@ -276,7 +276,7 @@ impl SmartModelManager {
                 ModelStatus {
                     model_id: model_id.clone(),
                     downloaded: true,
-                    path: Some(self.downloader.get_model_path(&model_id).unwrap()),
+                    path: Some(path),
                     size: model_info.size,
                     last_used: None,
                     use_count: 0,

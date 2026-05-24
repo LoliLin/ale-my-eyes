@@ -86,7 +86,7 @@ impl OpenAIApi {
         let client = reqwest::Client::builder()
             .timeout(config.timeout)
             .build()
-            .unwrap();
+            .unwrap_or_else(|_| reqwest::Client::new());
 
         Self { config, client }
     }
@@ -217,7 +217,7 @@ impl CloudApi for OpenAIApi {
                 reqwest::multipart::Part::bytes(audio_data.to_vec())
                     .file_name("audio.wav")
                     .mime_str("audio/wav")
-                    .unwrap(),
+                    .map_err(|e| AleError::CloudApiError(format!("Invalid MIME type: {e}")))?,
             )
             .text("model", "whisper-1");
 

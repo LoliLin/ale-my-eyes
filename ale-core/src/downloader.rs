@@ -45,7 +45,7 @@ impl ModelDownloader {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(300))
             .build()
-            .unwrap();
+            .unwrap_or_else(|_| reqwest::Client::new());
 
         Self {
             models_dir: models_dir.to_path_buf(),
