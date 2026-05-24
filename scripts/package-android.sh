@@ -454,7 +454,7 @@ EOF
 echo -e "${YELLOW}创建项目级 build.gradle...${NC}"
 cat > "${PACKAGE_DIR}/build.gradle" << 'EOF'
 plugins {
-    id 'com.android.application' version '8.2.2' apply false
+    id 'com.android.application' version '8.7.3' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
 }
 
@@ -501,7 +501,7 @@ mkdir -p "${PACKAGE_DIR}/gradle/wrapper"
 cat > "${PACKAGE_DIR}/gradle/wrapper/gradle-wrapper.properties" << EOF
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.9-bin.zip
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
 EOF
