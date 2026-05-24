@@ -5,6 +5,9 @@ edition = "2021"
 description = "Core functionality for Ale, My Eyes! - VLM, ASR, TTS integration"
 license = "MIT"
 
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 tts = { version = "0.25", optional = true }
 ort = { version = "2.0.0-rc.12", features = ["load-dynamic"] }

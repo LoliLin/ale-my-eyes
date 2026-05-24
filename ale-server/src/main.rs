@@ -41,7 +41,9 @@ async fn health_check() -> Json<HealthResponse> {
     })
 }
 
-async fn transcribe_audio(mut multipart: Multipart) -> Result<Json<TranscriptionResponse>, StatusCode> {
+async fn transcribe_audio(
+    _multipart: Multipart,
+) -> Result<Json<TranscriptionResponse>, StatusCode> {
     // 处理音频文件上传和转录
     // 这里简化处理
     Ok(Json(TranscriptionResponse {
@@ -50,7 +52,9 @@ async fn transcribe_audio(mut multipart: Multipart) -> Result<Json<Transcription
     }))
 }
 
-async fn synthesize_text(Json(payload): Json<serde_json::Value>) -> Result<Json<SynthesisResponse>, StatusCode> {
+async fn synthesize_text(
+    Json(_payload): Json<serde_json::Value>,
+) -> Result<Json<SynthesisResponse>, StatusCode> {
     // 处理文本转语音
     // 这里简化处理
     Ok(Json(SynthesisResponse {
@@ -59,7 +63,9 @@ async fn synthesize_text(Json(payload): Json<serde_json::Value>) -> Result<Json<
     }))
 }
 
-async fn describe_image(mut multipart: Multipart) -> Result<Json<ImageDescriptionResponse>, StatusCode> {
+async fn describe_image(
+    _multipart: Multipart,
+) -> Result<Json<ImageDescriptionResponse>, StatusCode> {
     // 处理图像上传和描述
     // 这里简化处理
     Ok(Json(ImageDescriptionResponse {
@@ -85,7 +91,7 @@ async fn main() {
     // 启动服务器
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     tracing::info!("Starting server on {}", addr);
-    
+
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

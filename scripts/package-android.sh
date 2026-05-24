@@ -50,11 +50,11 @@ echo -e "${YELLOW}构建 Android 版本...${NC}"
 
 # 构建 arm64 版本
 echo -e "${YELLOW}构建 arm64 版本...${NC}"
-cargo ndk -t arm64-v8a build --release
+cargo ndk -t arm64-v8a -p ale-core build --release
 
 # 构建 armv7 版本
 echo -e "${YELLOW}构建 armv7 版本...${NC}"
-cargo ndk -t armeabi-v7a build --release
+cargo ndk -t armeabi-v7a -p ale-core build --release
 
 # 创建打包目录
 PACKAGE_DIR="ale-my-eyes-android"

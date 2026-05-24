@@ -1,9 +1,9 @@
 pub mod cloud;
-pub mod inference;
-pub mod downloader;
-pub mod manager;
 pub mod config;
+pub mod downloader;
 pub mod error;
+pub mod inference;
+pub mod manager;
 pub mod types;
 
 // 条件编译模块
@@ -41,11 +41,11 @@ impl AleEngine {
         // 加载配置
         let mut config_manager = config::ConfigManager::new(config_path);
         config_manager.load()?;
-        
+
         // 检测设备性能
         let device_performance = inference::AdaptiveInference::detect_device_performance().await;
         let network_status = inference::AdaptiveInference::detect_network_status().await;
-        
+
         // 创建模型管理器
         let models_dir = Path::new(&config_manager.config().models.models_dir);
         let model_manager = manager::ModelManagerFactory::create_for_device(
@@ -53,7 +53,7 @@ impl AleEngine {
             device_performance,
             network_status,
         );
-        
+
         // 创建推理引擎
         let inference_config = inference::InferenceConfig {
             mode: match config_manager.config().inference.mode.as_str() {
@@ -64,11 +64,13 @@ impl AleEngine {
             device_performance,
             network_status,
             prefer_cloud: config_manager.config().inference.prefer_cloud,
-            timeout: std::time::Duration::from_secs(config_manager.config().inference.timeout as u64),
+            timeout: std::time::Duration::from_secs(
+                config_manager.config().inference.timeout as u64,
+            ),
         };
-        
+
         let inference_engine = inference::AdaptiveInference::new(inference_config);
-        
+
         Ok(Self {
             config_manager,
             model_manager: Arc::new(Mutex::new(model_manager)),
@@ -78,22 +80,15 @@ impl AleEngine {
             tts: None,
         })
     }
-    
+
     /// 设置云端API
     pub async fn set_cloud_api(&mut self, api: Box<dyn cloud::CloudApi>) -> Result<()> {
         // 更新推理引擎
         self.inference_engine.set_cloud_api(api);
-        
-        // 更新模型管理器
-        let mut manager = self.model_manager.lock().await;
-        // 注意：这里需要克隆api，因为我们已经移动了它
-        // 但CloudApi trait可能没有实现Clone，所以我们需要重新设计
-        // 暂时注释掉
-        // manager.set_cloud_api(api);
-        
+
         Ok(())
     }
-    
+
     /// 初始化TTS引擎（如果可用）
     #[cfg(feature = "tts")]
     pub async fn init_tts(&mut self, voice: Option<&str>) -> Result<()> {
@@ -101,13 +96,13 @@ impl AleEngine {
         self.tts = Some(Box::new(tts_engine));
         Ok(())
     }
-    
+
     /// 语音识别（通过推理引擎）
     pub async fn transcribe(&self, audio_data: &[u8]) -> Result<String> {
         let result = self.inference_engine.transcribe(audio_data).await?;
         Ok(result.data)
     }
-    
+
     /// 语音合成（通过推理引擎或本地TTS）
     pub async fn synthesize(&self, text: &str) -> Result<Vec<u8>> {
         // 优先使用本地TTS（如果可用）
@@ -115,94 +110,93 @@ impl AleEngine {
         if let Some(tts) = &self.tts {
             return tts.synthesize(text).await;
         }
-        
+
         // 使用推理引擎
-        let result = self.inference_engine.generate(text).await?;
+        self.inference_engine.generate(text).await?;
         // 这里需要将文本转换为音频，简化处理
         Err(AleError::Other(anyhow::anyhow!("TTS not available")))
     }
-    
+
     /// 图像描述（通过推理引擎）
     pub async fn describe_image(&self, image_data: &[u8]) -> Result<String> {
         let result = self.inference_engine.describe_image(image_data).await?;
         Ok(result.data)
     }
-    
+
     /// 自动下载推荐模型
     pub async fn auto_download_models(&self) -> Result<Vec<std::path::PathBuf>> {
         let mut manager = self.model_manager.lock().await;
         manager.auto_download_models().await
     }
-    
+
     /// 获取模型状态
     pub async fn get_model_status(&self, model_id: &str) -> Option<manager::ModelStatus> {
         let manager = self.model_manager.lock().await;
         manager.get_model_status(model_id).cloned()
     }
-    
+
     /// 获取配置
     pub fn config(&self) -> &config::AppConfig {
         self.config_manager.config()
     }
-    
+
     /// 更新配置
     pub fn update_config(&mut self, config: config::AppConfig) -> Result<()> {
         self.config_manager.update_config(config);
         self.config_manager.save()
     }
-    
+
     /// 检查引擎状态
     pub async fn status(&self) -> EngineStatus {
-        let manager = self.model_manager.lock().await;
         let cloud_ready = self.cloud_api.is_some();
-        
+
         #[cfg(feature = "tts")]
         let tts_ready = self.tts.is_some();
         #[cfg(not(feature = "tts"))]
         let tts_ready = false;
-        
+
         EngineStatus {
             cloud_ready,
             tts_ready,
         }
     }
-    
+
     /// 获取设备性能
     pub async fn device_performance(&self) -> inference::DevicePerformance {
         let manager = self.model_manager.lock().await;
         *manager.device_performance()
     }
-    
+
     /// 获取网络状态
     pub async fn network_status(&self) -> inference::NetworkStatus {
         let manager = self.model_manager.lock().await;
         *manager.network_status()
     }
-    
+
     /// 获取推荐模型
     pub async fn recommended_models(&self) -> Vec<downloader::ModelInfo> {
         let manager = self.model_manager.lock().await;
         manager.recommended_models().into_iter().cloned().collect()
     }
-    
+
     /// 下载指定模型
     pub async fn download_model(&self, model_id: &str) -> Result<std::path::PathBuf> {
         let mut manager = self.model_manager.lock().await;
         manager.download_model(model_id).await
     }
-    
+
     /// 删除模型
     pub async fn delete_model(&self, model_id: &str) -> Result<()> {
         let mut manager = self.model_manager.lock().await;
         manager.delete_model(model_id)
     }
-    
+
     /// 获取已下载模型列表
     pub async fn downloaded_models(&self) -> Vec<downloader::ModelInfo> {
         let manager = self.model_manager.lock().await;
         manager.downloaded_models().into_iter().cloned().collect()
     }
-    
+
     /// 获取所有可用模型
     pub async fn available_models(&self) -> Vec<downloader::ModelInfo> {
         let manager = self.model_manager.lock().await;
@@ -216,8 +210,9 @@ impl Default for AleEngine {
         // 为了编译通过，我们创建一个临时的实现
         let config_manager = config::ConfigManager::new(Path::new("config.json"));
         let model_manager = manager::ModelManagerFactory::create_default(Path::new("models"));
-        let inference_engine = inference::AdaptiveInference::new(inference::InferenceConfig::default());
-        
+        let inference_engine =
+            inference::AdaptiveInference::new(inference::InferenceConfig::default());
+
         Self {
             config_manager,
             model_manager: Arc::new(Mutex::new(model_manager)),
@@ -235,18 +230,22 @@ pub struct AleEngineFactory;
 impl AleEngineFactory {
     /// 创建默认引擎
     pub async fn create_default() -> Result<AleEngine> {
-        let config_path = config::ConfigFactory::create_default().config_path().to_path_buf();
+        let config_path = config::ConfigFactory::create_default()
+            .config_path()
+            .to_path_buf();
         AleEngine::new(&config_path).await
     }
-    
+
     /// 创建指定配置的引擎
     pub async fn create_with_config(config_path: &Path) -> Result<AleEngine> {
         AleEngine::new(config_path).await
     }
-    
+
     /// 创建测试引擎
     pub async fn create_test() -> Result<AleEngine> {
-        let config_path = config::ConfigFactory::create_test().config_path().to_path_buf();
+        let config_path = config::ConfigFactory::create_test()
+            .config_path()
+            .to_path_buf();
         AleEngine::new(&config_path).await
     }
 }

@@ -2,55 +2,135 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - master
+      - main
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - master
+      - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  check:
+    name: Check workspace
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: sudo apt-get update && sudo apt-get install -y libspeechd-dev libasound2-dev
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check workspace
+        run: cargo check --workspace
+
+  build-windows:
+    name: Build Windows package
+    needs: check
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Build
-        run: cargo build --release --all
-      - name: Upload Windows Artifact
+        run: ./scripts/package-windows.sh
+
+      - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: target/release/ale-gui.exe
+          name: ale-my-eyes-windows
+          path: |
+            ale-my-eyes-windows/
+            ale-my-eyes-windows.zip
 
   build-linux:
+    name: Build Linux package
+    needs: check
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
       - name: Install Dependencies
         run: sudo apt-get update && sudo apt-get install -y libspeechd-dev libasound2-dev
+
       - name: Build
-        run: cargo build --release --all
-      - name: Upload Linux Artifact
+        run: ./scripts/package-linux.sh
+
+      - name: Upload Linux package
         uses: actions/upload-artifact@v4
         with:
-          name: linux-build
-          path: target/release/ale-gui
+          name: ale-my-eyes-linux
+          path: |
+            ale-my-eyes-linux/
+            ale-my-eyes-linux.tar.gz
 
-  release:
-    needs: [build-windows, build-linux]
+  build-android:
+    name: Build Android package
+    needs: check
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Android NDK
+        run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
+
+      - name: Build
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
+        run: ./scripts/package-android.sh
+
+      - name: Upload Android package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ale-my-eyes-android
+          path: |
+            ale-my-eyes-android/
+            ale-my-eyes-android.zip
+
+  release:
+    name: Publish GitHub release
+    needs: [build-windows, build-linux, build-android]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/windows-build/ale-gui.exe
-            artifacts/linux-build/ale-gui
+            artifacts/ale-my-eyes-windows/ale-my-eyes-windows.zip
+            artifacts/ale-my-eyes-linux/ale-my-eyes-linux.tar.gz
+            artifacts/ale-my-eyes-android/ale-my-eyes-android.zip
           draft: false
           prerelease: false

@@ -1,0 +1,32 @@
+# AGENTS.md
+
+## Repository Shape
+- This is a Rust workspace with active crates `ale-core`, `ale-server`, `ale-cli`, and `ale-gui` declared in the root `Cargo.toml`.
+- Treat root crate directories as source of truth. `release/ale-my-eyes-source/` is a generated source snapshot from `scripts/create-release.sh`, not the primary code to edit.
+- `dist/`, `release/`, `target/`, packaged app directories, model files, and `config/config.json` are build/runtime artifacts; avoid editing them unless the task is explicitly about packaging output.
+
+## Useful Commands
+- Check only the library crate: `cargo check -p ale-core`.
+- Check server/CLI/core together: `cargo check -p ale-core -p ale-server -p ale-cli`.
+- Check GUI separately: `cargo check -p ale-gui`.
+- Run tests when present: `cargo test` or focused package tests with `cargo test -p ale-core`.
+- Format and lint are plain Cargo commands: `cargo fmt` and `cargo clippy --workspace --all-targets`.
+- Run entrypoints with `cargo run -p ale-server`, `cargo run -p ale-cli -- <subcommand>`, and `cargo run -p ale-gui`.
+
+## Current Build Notes
+- `cargo check --workspace` is expected to pass as of this file's latest update.
+- `ale-server` uses Axum multipart extraction, so keep Axum's `multipart` feature enabled.
+- `ale-gui` uses iced `0.14`; app boot is `iced::application(AleApp::new, ...)` with `.title(...)`, subscriptions return `Subscription`, and `center_x/center_y` require explicit `Length` args.
+
+## Architecture Notes
+- `ale-core/src/lib.rs` exposes `AleEngine` and gates local ASR/VLM/LLM/TTS modules behind features. Default features only enable `cloud`.
+- Config defaults are created by `ConfigFactory::create_default()` under the user config directory `ale-my-eyes/config.json`; test config uses `/tmp/ale-my-eyes-test/config.json`.
+- Server routes are hardcoded in `ale-server/src/main.rs` on `0.0.0.0:8000`: `/health`, `/asr/transcribe`, `/tts/synthesize`, and `/vlm/describe`.
+- CLI subcommands exist in `ale-cli/src/main.rs`, but transcribe/synthesize/describe/status are still TODO stubs.
+- Cloud integration in `ale-core/src/cloud.rs` is OpenAI-shaped by default (`gpt-4o`, `whisper-1`, `tts-1`); do not introduce real API keys into tracked files.
+
+## Packaging
+- Linux packaging: `./scripts/package-linux.sh` builds release binaries and writes `ale-my-eyes-linux/` plus an archive in the repo root.
+- Windows packaging: `./scripts/package-windows.sh` adds the `x86_64-pc-windows-msvc` target and writes `ale-my-eyes-windows/` plus a zip when zip/7z exists.
+- Android packaging: `./scripts/package-android.sh` requires `ANDROID_NDK_ROOT`, installs `cargo-ndk` if missing, and generates an Android Gradle project under `ale-my-eyes-android/`.
+- `./scripts/create-release.sh` deletes and recreates `release/`; use it only when intentionally regenerating release bundles.

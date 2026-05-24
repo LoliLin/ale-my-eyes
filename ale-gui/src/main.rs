@@ -1,45 +1,49 @@
 use ale_core::{AleEngine, AleEngineFactory};
 use iced::widget::{button, column, container, text};
-use iced::{Alignment, Element, Length, Task};
+use iced::{Alignment, Element, Length, Subscription, Task};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub fn main() -> iced::Result {
-    iced::application("Ale, My Eyes!", AleApp::update, AleApp::view)
+    iced::application(AleApp::new, AleApp::update, AleApp::view)
+        .title("Ale, My Eyes!")
         .subscription(AleApp::subscription)
         .run()
 }
 
 struct AleApp {
-    engine: Arc<Mutex<AleEngine>>,
+    engine: Option<Arc<Mutex<AleEngine>>>,
     status: String,
     result: String,
     is_recording: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum Message {
     ToggleRecording,
     DescribeImage,
     ClearResult,
-    StatusUpdated(String),
-    ResultUpdated(String),
+    EngineReady(Result<Arc<Mutex<AleEngine>>, String>),
 }
 
 impl AleApp {
     fn new() -> (Self, Task<Message>) {
-        let engine = Arc::new(Mutex::new(
-            AleEngineFactory::create_default().expect("Failed to create engine"),
-        ));
-
         (
             Self {
-                engine,
-                status: "就绪".to_string(),
+                engine: None,
+                status: "正在初始化...".to_string(),
                 result: String::new(),
                 is_recording: false,
             },
-            Task::none(),
+            Task::perform(
+                async {
+                    AleEngineFactory::create_default()
+                        .await
+                        .map(|engine| Arc::new(Mutex::new(engine)))
+                        .map_err(|error| error.to_string())
+                },
+                Message::EngineReady,
+            ),
         )
     }
 
@@ -65,26 +69,22 @@ impl AleApp {
             Message::ClearResult => {
                 self.result.clear();
             }
-            Message::StatusUpdated(status) => {
-                self.status = status;
+            Message::EngineReady(Ok(engine)) => {
+                self.engine = Some(engine);
+                self.status = "就绪".to_string();
             }
-            Message::ResultUpdated(result) => {
-                self.result = result;
+            Message::EngineReady(Err(error)) => {
+                self.status = format!("初始化失败: {error}");
             }
         }
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
-        let status_card = container(
-            column![
-                text("系统状态").size(20),
-                text(&self.status).size(16),
-            ]
-            .spacing(8),
-        )
-        .padding(16)
-        .style(container::rounded_box);
+    fn view(&self) -> Element<'_, Message> {
+        let status_card =
+            container(column![text("系统状态").size(20), text(&self.status).size(16),].spacing(8))
+                .padding(16)
+                .style(container::rounded_box);
 
         let voice_button = button(
             text(if self.is_recording {
@@ -107,7 +107,7 @@ impl AleApp {
             .style(button::secondary)
             .on_press(Message::DescribeImage);
 
-        let result_card = if !self.result.is_empty() {
+        let result_card: Element<Message> = if !self.result.is_empty() {
             container(
                 column![
                     text("识别结果").size(20),
@@ -147,12 +147,12 @@ impl AleApp {
         container(content)
             .width(Length::Fill)
             .height(Length::Fill)
-            .center_x()
-            .center_y()
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
             .into()
     }
 
-    fn subscription(&self) -> Task<Message> {
-        Task::none()
+    fn subscription(&self) -> Subscription<Message> {
+        Subscription::none()
     }
 }

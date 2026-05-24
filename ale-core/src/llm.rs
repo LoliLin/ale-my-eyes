@@ -1,7 +1,7 @@
+use crate::{AleError, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use crate::{AleError, Result};
 
 /// LLM推理后端
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,13 +57,10 @@ pub struct LlmResponse {
 pub trait LanguageModel: Send + Sync {
     /// 生成文本
     async fn generate(&self, prompt: &str) -> Result<LlmResponse>;
-    
+
     /// 流式生成
-    async fn generate_stream(
-        &self,
-        prompt: &str,
-    ) -> Result<Box<dyn tokio::io::AsyncRead + Unpin>>;
-    
+    async fn generate_stream(&self, prompt: &str) -> Result<Box<dyn tokio::io::AsyncRead + Unpin>>;
+
     /// 获取模型信息
     fn model_info(&self) -> crate::ModelInfo;
 }
@@ -81,15 +78,18 @@ impl LocalLlm {
             model: None,
         })
     }
-    
+
     fn load_model(&mut self) -> Result<()> {
         if self.model.is_some() {
             return Ok(());
         }
-        
-        let model_path = self.config.model_path.as_ref()
+
+        let model_path = self
+            .config
+            .model_path
+            .as_ref()
             .ok_or(AleError::Other(anyhow::anyhow!("Model path not specified")))?;
-        
+
         // 检查模型文件是否存在
         if !Path::new(model_path).exists() {
             return Err(AleError::Other(anyhow::anyhow!(
@@ -97,14 +97,14 @@ impl LocalLlm {
                 model_path
             )));
         }
-        
+
         // 加载模型
         let model = llama_cpp_rs::LlamaModel::load_from_file(
             model_path,
             &llama_cpp_rs::LlamaParams::default(),
         )
         .map_err(|e| AleError::Other(anyhow::anyhow!("Failed to load model: {}", e)))?;
-        
+
         self.model = Some(model);
         Ok(())
     }
@@ -117,15 +117,14 @@ impl LanguageModel for LocalLlm {
         // 由于llama-cpp-rs API的限制，这里简化处理
         Err(AleError::Other(anyhow::anyhow!("Not implemented yet")))
     }
-    
-    async fn generate_stream(
-        &self,
-        prompt: &str,
-    ) -> Result<Box<dyn tokio::io::AsyncRead + Unpin>> {
+
+    async fn generate_stream(&self, prompt: &str) -> Result<Box<dyn tokio::io::AsyncRead + Unpin>> {
         // 流式生成
-        Err(AleError::Other(anyhow::anyhow!("Streaming not implemented yet")))
+        Err(AleError::Other(anyhow::anyhow!(
+            "Streaming not implemented yet"
+        )))
     }
-    
+
     fn model_info(&self) -> crate::ModelInfo {
         crate::ModelInfo {
             name: self.config.model_name.clone().unwrap_or_default(),
@@ -152,15 +151,24 @@ impl RemoteLlm {
 #[async_trait]
 impl LanguageModel for RemoteLlm {
     async fn generate(&self, prompt: &str) -> Result<LlmResponse> {
-        let api_url = self.config.api_url.as_ref()
+        let api_url = self
+            .config
+            .api_url
+            .as_ref()
             .ok_or(AleError::Other(anyhow::anyhow!("API URL not specified")))?;
-        
-        let api_key = self.config.api_key.as_ref()
+
+        let api_key = self
+            .config
+            .api_key
+            .as_ref()
             .ok_or(AleError::Other(anyhow::anyhow!("API key not specified")))?;
-        
-        let model_name = self.config.model_name.as_ref()
+
+        let model_name = self
+            .config
+            .model_name
+            .as_ref()
             .ok_or(AleError::Other(anyhow::anyhow!("Model name not specified")))?;
-        
+
         // 构建请求体
         let request_body = serde_json::json!({
             "model": model_name,
@@ -174,9 +182,10 @@ impl LanguageModel for RemoteLlm {
             "temperature": self.config.temperature,
             "top_p": self.config.top_p
         });
-        
+
         // 发送请求
-        let response = self.client
+        let response = self
+            .client
             .post(api_url)
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
@@ -184,7 +193,7 @@ impl LanguageModel for RemoteLlm {
             .send()
             .await
             .map_err(|e| AleError::Other(anyhow::anyhow!("API request failed: {}", e)))?;
-        
+
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(AleError::Other(anyhow::anyhow!(
@@ -192,35 +201,34 @@ impl LanguageModel for RemoteLlm {
                 error_text
             )));
         }
-        
-        let response_body: serde_json::Value = response.json().await
+
+        let response_body: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| AleError::Other(anyhow::anyhow!("Failed to parse response: {}", e)))?;
-        
+
         // 提取响应文本
         let text = response_body["choices"][0]["message"]["content"]
             .as_str()
             .unwrap_or_default()
             .to_string();
-        
-        let tokens_used = response_body["usage"]["total_tokens"]
-            .as_u64()
-            .unwrap_or(0) as usize;
-        
+
+        let tokens_used = response_body["usage"]["total_tokens"].as_u64().unwrap_or(0) as usize;
+
         Ok(LlmResponse {
             text,
             tokens_used,
             finish_reason: "stop".to_string(),
         })
     }
-    
-    async fn generate_stream(
-        &self,
-        prompt: &str,
-    ) -> Result<Box<dyn tokio::io::AsyncRead + Unpin>> {
+
+    async fn generate_stream(&self, prompt: &str) -> Result<Box<dyn tokio::io::AsyncRead + Unpin>> {
         // 流式生成
-        Err(AleError::Other(anyhow::anyhow!("Streaming not implemented yet")))
+        Err(AleError::Other(anyhow::anyhow!(
+            "Streaming not implemented yet"
+        )))
     }
-    
+
     fn model_info(&self) -> crate::ModelInfo {
         crate::ModelInfo {
             name: self.config.model_name.clone().unwrap_or_default(),
@@ -245,9 +253,7 @@ impl LlmFactory {
                 let llm = RemoteLlm::new(config).await?;
                 Ok(Box::new(llm))
             }
-            _ => Err(AleError::Other(anyhow::anyhow!(
-                "Unsupported LLM backend"
-            ))),
+            _ => Err(AleError::Other(anyhow::anyhow!("Unsupported LLM backend"))),
         }
     }
 }
