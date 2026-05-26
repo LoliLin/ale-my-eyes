@@ -12,7 +12,7 @@ mkdir -p release
 # 1. 创建源码包
 echo "创建源码包..."
 mkdir -p release/ale-my-eyes-source
-cp -r ale-core ale-cli ale-gui ale-server scripts release/ale-my-eyes-source/
+cp -r ale-core ale-cli ale-gui scripts release/ale-my-eyes-source/
 cp Cargo.toml README.md LICENSE release/ale-my-eyes-source/
 
 # 创建源码包的配置示例
@@ -76,7 +76,6 @@ export ANDROID_NDK_ROOT=/path/to/ndk
 
 ## 运行
 ```bash
-cargo run --bin ale-server
 cargo run --bin ale-gui
 ```
 EOF

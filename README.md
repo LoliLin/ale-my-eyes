@@ -63,9 +63,6 @@
 # 桌面 GUI
 cargo run -p ale-gui
 
-# HTTP 服务器
-cargo run -p ale-server
-
 # 命令行
 cargo run -p ale-cli -- transcribe --audio input.wav
 ```
@@ -92,8 +89,6 @@ ale-my-eyes-rust/
 │   │   ├── downloader.rs      # 模型下载器
 │   │   └── manager.rs         # 模型管理器
 │   └── Cargo.toml
-├── ale-server/                # HTTP 服务器 (Axum)
-│   └── src/main.rs            # /health, /asr, /tts, /vlm/describe, /vlm/ask
 ├── ale-cli/                   # 命令行工具
 ├── ale-gui/                   # 跨平台 GUI (Slint)
 │   ├── ui/
@@ -142,7 +137,6 @@ ale-my-eyes-rust/
 | Android 相机 | JNI Camera2 API |
 | 桌面音频 | cpal + rodio |
 | Android 音频 | oboe + JNI MediaPlayer |
-| Web 框架 | Axum + Tokio |
 
 ### 数据流
 
@@ -161,23 +155,9 @@ ale-my-eyes-rust/
 └─────────────────────────────────────────────────────────┘
 ```
 
-## HTTP Server
+## 相关项目
 
-```bash
-cargo run -p ale-server
-```
-
-默认 `0.0.0.0:8000`：
-
-| 端点 | 方法 | 功能 |
-|------|------|------|
-| `/health` | GET | 健康检查 |
-| `/status` | GET | 系统状态 |
-| `/models` | GET | 模型列表 |
-| `/asr/transcribe` | POST | 语音识别 |
-| `/tts/synthesize` | POST | 语音合成 |
-| `/vlm/describe` | POST | 图片描述 |
-| `/vlm/ask` | POST | 视觉问答（图片 + 问题） |
+- **[ale-server](https://github.com/Risaly-Noroki-Dev-Club/ale-server)** — HTTP API 服务器（独立项目）
 
 ## 开发指南
 
@@ -235,7 +215,6 @@ MIT License - 查看 [LICENSE](LICENSE)
 - [Slint](https://slint.dev/) - 跨平台 UI 框架
 - [xcap](https://github.com/nashaofu/xcap) - 跨平台屏幕截图
 - [enigo](https://github.com/enigo-rs/enigo) - 键鼠自动化
-- [Axum](https://github.com/tokio-rs/axum) - Web 框架
 - [水素&lin] - 最初的动力
 
 ## 联系

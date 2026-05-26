@@ -80,13 +80,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libspeechd-dev libasound2-dev libfontconfig-dev libpipewire-0.3-dev libwayland-dev libxrandr-dev libdbus-1-dev libegl-dev
 
       - name: Build
-        run: cargo build --release -p ale-server -p ale-cli -p ale-gui
+        run: cargo build --release -p ale-cli -p ale-gui
 
       - name: Create deb package
         run: |
           PACKAGE_ROOT="dist/deb/ale-my-eyes"
           mkdir -p "${PACKAGE_ROOT}/DEBIAN" "${PACKAGE_ROOT}/usr/bin"
-          cp target/release/ale-server "${PACKAGE_ROOT}/usr/bin/"
           cp target/release/ale-cli "${PACKAGE_ROOT}/usr/bin/"
           cp target/release/ale-gui "${PACKAGE_ROOT}/usr/bin/"
           cat > "${PACKAGE_ROOT}/DEBIAN/control" <<'EOF'

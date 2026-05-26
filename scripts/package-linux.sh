@@ -36,7 +36,6 @@ mkdir -p "${PACKAGE_DIR}"
 
 # 复制可执行文件
 echo -e "${YELLOW}复制可执行文件...${NC}"
-cp target/release/ale-server "${PACKAGE_DIR}/"
 cp target/release/ale-cli "${PACKAGE_DIR}/"
 cp target/release/ale-gui "${PACKAGE_DIR}/"
 
@@ -94,12 +93,6 @@ EOF
 
 # 创建启动脚本
 echo -e "${YELLOW}创建启动脚本...${NC}"
-cat > "${PACKAGE_DIR}/start-server.sh" << EOF
-#!/bin/bash
-echo "启动 Ale, My Eyes! 服务器..."
-./ale-server
-EOF
-
 cat > "${PACKAGE_DIR}/start-gui.sh" << EOF
 #!/bin/bash
 echo "启动 Ale, My Eyes! 图形界面..."
@@ -107,9 +100,7 @@ echo "启动 Ale, My Eyes! 图形界面..."
 EOF
 
 # 设置执行权限
-chmod +x "${PACKAGE_DIR}/start-server.sh"
 chmod +x "${PACKAGE_DIR}/start-gui.sh"
-chmod +x "${PACKAGE_DIR}/ale-server"
 chmod +x "${PACKAGE_DIR}/ale-cli"
 chmod +x "${PACKAGE_DIR}/ale-gui"
 
@@ -131,9 +122,9 @@ EOF
 # 创建 README
 echo -e "${YELLOW}创建 README...${NC}"
 cat > "${PACKAGE_DIR}/README.md" << EOF
-# Ale, My Eyes! - 智能辅助系统
+# Ale, My Eyes! - 智能视觉辅助系统
 
-这是一个为视障人士设计的智能辅助系统，使用 VLM/ASR/TTS 技术帮助用户更好地使用电脑。
+对着摄像头或屏幕说话，AI 用自然语言回答你的问题，还能帮你操作电脑。
 
 ## 快速开始
 
@@ -143,22 +134,22 @@ cat > "${PACKAGE_DIR}/README.md" << EOF
 "api_key": "sk-your-api-key-here"
 \`\`\`
 
-### 2. 启动服务器
-\`\`\`bash
-./start-server.sh
-\`\`\`
-
-### 3. 启动图形界面
+### 2. 启动图形界面
 \`\`\`bash
 ./start-gui.sh
 \`\`\`
 
 ## 功能特性
 
-- 语音识别：通过麦克风输入语音指令
-- 语音合成：系统状态和屏幕内容的语音反馈
-- 图像描述：上传图像获取描述
-- 自然语言交互：支持自然语言指令
+- 语音交互：持续监听，VAD 自动检测说话结束
+- 视觉问答：对摄像头或屏幕提问，AI 自然语言回答
+- 桌面自动化：语音控制键鼠操作
+- 多语言识别：支持 17 种语言
+
+## HTTP API 服务器
+
+如需 HTTP API 服务，请单独安装 ale-server：
+https://github.com/Risaly-Noroki-Dev-Club/ale-server
 
 ## 系统要求
 
@@ -166,31 +157,6 @@ cat > "${PACKAGE_DIR}/README.md" << EOF
 - 至少 4GB 内存
 - 麦克风和扬声器
 - 网络连接（用于云端 API）
-
-## 配置说明
-
-配置文件位于 config/config.json，包含以下设置：
-
-- cloud_api: 云端 API 配置
-- models: 模型下载和管理设置
-- inference: 推理模式设置
-- audio: 音频设置
-- ui: 界面设置
-
-## 安装依赖
-
-某些功能可能需要系统依赖：
-
-\`\`\`bash
-# Ubuntu/Debian
-sudo apt-get install libspeechd-dev libasound2-dev
-
-# Fedora
-sudo dnf install speech-dispatcher-devel alsa-lib-devel
-
-# Arch Linux
-sudo pacman -S speech-dispatcher alsa-lib
-\`\`\`
 
 ## 获取帮助
 
@@ -221,5 +187,4 @@ fi
 echo -e "${YELLOW}下一步：${NC}"
 echo -e "1. 将 ${PACKAGE_DIR} 目录复制到目标 Linux 机器"
 echo -e "2. 编辑 config/config.json 设置 API 密钥"
-echo -e "3. 运行 ./start-server.sh 启动服务器"
-echo -e "4. 运行 ./start-gui.sh 启动图形界面"
+echo -e "3. 运行 ./start-gui.sh 启动图形界面"

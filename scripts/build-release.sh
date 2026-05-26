@@ -13,10 +13,9 @@ echo "构建 Linux 版本..."
 cargo build --release 2>/dev/null || echo "Linux 构建跳过（需要完整环境）"
 
 # 创建 Linux 包
-if [ -f target/release/ale-server ]; then
+if [ -f target/release/ale-gui ]; then
     echo "打包 Linux 版本..."
     mkdir -p dist/ale-my-eyes-linux
-    cp target/release/ale-server dist/ale-my-eyes-linux/
     cp target/release/ale-cli dist/ale-my-eyes-linux/
     cp target/release/ale-gui dist/ale-my-eyes-linux/
     cp -r scripts dist/ale-my-eyes-linux/
@@ -26,8 +25,8 @@ if [ -f target/release/ale-server ]; then
     # 创建启动脚本
     cat > dist/ale-my-eyes-linux/start.sh << 'EOF'
 #!/bin/bash
-echo "启动 Ale, My Eyes! 服务器..."
-./ale-server
+echo "启动 Ale, My Eyes! 图形界面..."
+./ale-gui
 EOF
     chmod +x dist/ale-my-eyes-linux/start.sh
 
@@ -138,7 +137,7 @@ cat > dist/QUICKSTART.md << 'EOF'
 
 ## 3. 启动应用
 ### Windows
-运行 `start-server.bat` 和 `start-gui.bat`
+运行 `start-gui.bat`
 
 ### Linux
 运行 `./start.sh`
