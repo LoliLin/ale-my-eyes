@@ -1,7 +1,10 @@
+use crate::{AleError, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-use crate::{AleError, Result};
+
+#[cfg(feature = "local-inference")]
+use crate::asr::SpeechRecognizer;
 
 /// 设备性能等级
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -84,6 +87,8 @@ pub struct InferenceResult<T> {
 pub struct AdaptiveInference {
     config: InferenceConfig,
     cloud_api: Option<Box<dyn crate::cloud::CloudApi>>,
+    #[cfg(feature = "local-inference")]
+    local_asr: Option<crate::asr::WhisperRecognizer>,
 }
 
 impl AdaptiveInference {
@@ -91,32 +96,40 @@ impl AdaptiveInference {
         Self {
             config,
             cloud_api: None,
+            #[cfg(feature = "local-inference")]
+            local_asr: None,
         }
     }
-    
+
     /// 设置云端API
     pub fn set_cloud_api(&mut self, api: Box<dyn crate::cloud::CloudApi>) {
         self.cloud_api = Some(api);
     }
-    
+
+    /// 设置本地 ASR 模型
+    #[cfg(feature = "local-inference")]
+    pub fn set_local_asr(&mut self, recognizer: crate::asr::WhisperRecognizer) {
+        self.local_asr = Some(recognizer);
+    }
+
     /// 检测设备性能
     pub async fn detect_device_performance() -> DevicePerformance {
         // 这里可以添加实际的设备性能检测逻辑
         // 例如：检查CPU核心数、内存大小、GPU可用性等
-        
+
         // 简化实现：返回默认值
         DevicePerformance::Medium
     }
-    
+
     /// 检测网络状态
     pub async fn detect_network_status() -> NetworkStatus {
         // 这里可以添加实际的网络状态检测逻辑
         // 例如：ping测试、带宽测试等
-        
+
         // 简化实现：假设正常网络
         NetworkStatus::Normal
     }
-    
+
     /// 选择推理模式
     fn select_inference_mode(&self, task_complexity: TaskComplexity) -> InferenceMode {
         match self.config.mode {
@@ -161,31 +174,45 @@ impl AdaptiveInference {
             }
         }
     }
-    
+
     /// 语音识别推理
     pub async fn transcribe(&self, audio_data: &[u8]) -> Result<InferenceResult<String>> {
         let start_time = Instant::now();
-        
+
         // 选择推理模式
         let mode = self.select_inference_mode(TaskComplexity::Simple);
-        
+
         let result = match mode {
             InferenceMode::LocalOnly => {
-                // 本地推理（需要本地模型）
-                return Err(AleError::Other(anyhow::anyhow!("Local inference not available")));
+                #[cfg(feature = "local-inference")]
+                {
+                    let asr = self
+                        .local_asr
+                        .as_ref()
+                        .ok_or_else(|| AleError::NotInitialized("Local ASR model"))?;
+                    asr.transcribe(audio_data).await?
+                }
+                #[cfg(not(feature = "local-inference"))]
+                {
+                    return Err(AleError::Other(anyhow::anyhow!(
+                        "Local inference not available (feature not enabled)"
+                    )));
+                }
             }
             InferenceMode::CloudOnly | InferenceMode::Adaptive => {
                 // 云端推理
-                let cloud_api = self.cloud_api.as_ref()
+                let cloud_api = self
+                    .cloud_api
+                    .as_ref()
                     .ok_or(AleError::NotInitialized("Cloud API"))?;
-                
+
                 let response = cloud_api.transcribe(audio_data).await?;
                 response.content
             }
         };
-        
+
         let latency = start_time.elapsed();
-        
+
         Ok(InferenceResult {
             data: result,
             mode_used: mode,
@@ -193,31 +220,35 @@ impl AdaptiveInference {
             tokens_used: None,
         })
     }
-    
+
     /// 图像描述推理
     pub async fn describe_image(&self, image_data: &[u8]) -> Result<InferenceResult<String>> {
         let start_time = Instant::now();
-        
+
         // 选择推理模式
         let mode = self.select_inference_mode(TaskComplexity::Complex);
-        
+
         let result = match mode {
             InferenceMode::LocalOnly => {
                 // 本地推理（需要本地模型）
-                return Err(AleError::Other(anyhow::anyhow!("Local inference not available")));
+                return Err(AleError::Other(anyhow::anyhow!(
+                    "Local inference not available"
+                )));
             }
             InferenceMode::CloudOnly | InferenceMode::Adaptive => {
                 // 云端推理
-                let cloud_api = self.cloud_api.as_ref()
+                let cloud_api = self
+                    .cloud_api
+                    .as_ref()
                     .ok_or(AleError::NotInitialized("Cloud API"))?;
-                
+
                 let response = cloud_api.vision(image_data, "请描述这张图片的内容").await?;
                 response.content
             }
         };
-        
+
         let latency = start_time.elapsed();
-        
+
         Ok(InferenceResult {
             data: result,
             mode_used: mode,
@@ -225,36 +256,77 @@ impl AdaptiveInference {
             tokens_used: None,
         })
     }
-    
+
+    /// 视觉问答推理（支持自定义问题 + Function Calling）
+    pub async fn ask_about_image(
+        &self,
+        image_data: &[u8],
+        question: &str,
+        tools: Option<Vec<serde_json::Value>>,
+    ) -> Result<InferenceResult<crate::cloud::VisionResponse>> {
+        let start_time = Instant::now();
+
+        let mode = self.select_inference_mode(TaskComplexity::Complex);
+
+        let result = match mode {
+            InferenceMode::LocalOnly => {
+                return Err(AleError::Other(anyhow::anyhow!(
+                    "Local inference not available"
+                )));
+            }
+            InferenceMode::CloudOnly | InferenceMode::Adaptive => {
+                let cloud_api = self
+                    .cloud_api
+                    .as_ref()
+                    .ok_or(AleError::NotInitialized("Cloud API"))?;
+
+                cloud_api.vision_ask(image_data, question, tools).await?
+            }
+        };
+
+        let latency = start_time.elapsed();
+
+        Ok(InferenceResult {
+            data: result,
+            mode_used: mode,
+            latency,
+            tokens_used: None,
+        })
+    }
+
     /// 文本生成推理
     pub async fn generate(&self, prompt: &str) -> Result<InferenceResult<String>> {
         let start_time = Instant::now();
-        
+
         // 选择推理模式
         let mode = self.select_inference_mode(TaskComplexity::Medium);
-        
+
         let result = match mode {
             InferenceMode::LocalOnly => {
                 // 本地推理（需要本地模型）
-                return Err(AleError::Other(anyhow::anyhow!("Local inference not available")));
+                return Err(AleError::Other(anyhow::anyhow!(
+                    "Local inference not available"
+                )));
             }
             InferenceMode::CloudOnly | InferenceMode::Adaptive => {
                 // 云端推理
-                let cloud_api = self.cloud_api.as_ref()
+                let cloud_api = self
+                    .cloud_api
+                    .as_ref()
                     .ok_or(AleError::NotInitialized("Cloud API"))?;
-                
+
                 let messages = vec![crate::cloud::CloudMessage {
                     role: "user".to_string(),
                     content: prompt.to_string(),
                 }];
-                
+
                 let response = cloud_api.chat(messages).await?;
                 response.content
             }
         };
-        
+
         let latency = start_time.elapsed();
-        
+
         Ok(InferenceResult {
             data: result,
             mode_used: mode,

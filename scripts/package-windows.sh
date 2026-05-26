@@ -40,7 +40,6 @@ mkdir -p "${PACKAGE_DIR}"
 
 # 复制可执行文件
 echo -e "${YELLOW}复制可执行文件...${NC}"
-cp target/x86_64-pc-windows-msvc/release/ale-server.exe "${PACKAGE_DIR}/"
 cp target/x86_64-pc-windows-msvc/release/ale-cli.exe "${PACKAGE_DIR}/"
 cp target/x86_64-pc-windows-msvc/release/ale-gui.exe "${PACKAGE_DIR}/"
 
@@ -98,13 +97,6 @@ EOF
 
 # 创建启动脚本
 echo -e "${YELLOW}创建启动脚本...${NC}"
-cat > "${PACKAGE_DIR}/start-server.bat" << EOF
-@echo off
-echo 启动 Ale, My Eyes! 服务器...
-ale-server.exe
-pause
-EOF
-
 cat > "${PACKAGE_DIR}/start-gui.bat" << EOF
 @echo off
 echo 启动 Ale, My Eyes! 图形界面...
@@ -115,10 +107,10 @@ EOF
 # 创建 README
 echo -e "${YELLOW}创建 README...${NC}"
 cat > "${PACKAGE_DIR}/README.txt" << EOF
-Ale, My Eyes! - 智能辅助系统
-============================
+Ale, My Eyes! - 智能视觉辅助系统
+================================
 
-这是一个为视障人士设计的智能辅助系统，使用 VLM/ASR/TTS 技术帮助用户更好地使用电脑。
+对着摄像头或屏幕说话，AI 用自然语言回答你的问题，还能帮你操作电脑。
 
 快速开始
 --------
@@ -127,19 +119,22 @@ Ale, My Eyes! - 智能辅助系统
    打开 config/config.json 文件，设置您的 OpenAI API 密钥：
    "api_key": "sk-your-api-key-here"
 
-2. 启动服务器
-   双击 start-server.bat 启动后端服务器
-
-3. 启动图形界面
+2. 启动图形界面
    双击 start-gui.bat 启动图形界面
 
 功能特性
 --------
 
-- 语音识别：通过麦克风输入语音指令
-- 语音合成：系统状态和屏幕内容的语音反馈
-- 图像描述：上传图像获取描述
-- 自然语言交互：支持自然语言指令
+- 语音交互：持续监听，VAD 自动检测说话结束
+- 视觉问答：对摄像头或屏幕提问，AI 自然语言回答
+- 桌面自动化：语音控制键鼠操作
+- 多语言识别：支持 17 种语言
+
+HTTP API 服务器
+---------------
+
+如需 HTTP API 服务，请单独安装 ale-server：
+https://github.com/Risaly-Noroki-Dev-Club/ale-server
 
 系统要求
 --------

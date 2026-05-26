@@ -1,267 +1,224 @@
-# Ale, My Eyes! - 智能辅助系统
+# Ale, My Eyes! - 智能视觉辅助系统
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/Made%20with-Rust-red.svg)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20Android-blue.svg)]()
 
-> 为视障人士打造的智能辅助系统，使用 VLM/ASR/TTS 技术帮助用户更好地使用电脑
+> 对着摄像头或屏幕说话，AI 用自然语言回答你的问题，还能帮你操作电脑
 
-## 📖 项目简介
+## 项目简介
 
-**Ale, My Eyes!** 是一个基于 Rust 开发的跨平台智能辅助系统，专为视障人士设计。通过集成视觉语言模型（VLM）、语音识别（ASR）和语音合成（TTS）技术，为用户提供自然的语音交互体验，替代传统的 VDA 和讲述人工具。
+**Ale, My Eyes!** 是一个基于 Rust 的跨平台智能视觉辅助系统。用户通过语音向设备提问，AI 结合摄像头画面或屏幕截图给出自然语言回答，并可在桌面端自动执行键鼠操作。
 
-### 🎯 核心理念
+**两种使用模式：**
 
-- **低性能设备友好**：优化内存使用，支持联发科/赛扬等低端CPU
-- **云端优先**：复杂任务使用云端API，本地处理简单任务
-- **智能切换**：根据设备性能和网络状态自动选择最佳推理方式
-- **离线可用**：无网络时降级到本地模型，保证基本功能可用
+| 平台 | 交互方式 |
+|------|----------|
+| **Android** | 打开即是相机界面，持续监听语音，对着摄像头提问，AI 实时回答 |
+| **PC/Linux** | 小窗口常驻，持续监控屏幕，语音下达指令，AI 自动操作键鼠 |
 
-## ✨ 功能特性
+## 功能特性
 
-### 🎤 语音交互
-- **语音识别**：通过麦克风输入语音指令，支持中英文等多语言
-- **语音合成**：系统状态和屏幕内容的语音反馈，支持多种语音风格
-- **自然语言理解**：支持自然语言指令，如"打开浏览器"、"读取当前页面"
+### 语音交互
+- **持续监听** — 应用启动即开始录音，VAD 自动检测说话结束并触发处理
+- **语音活动检测** — 基于能量的 VAD 状态机（静默 → 说话中 → 说话结束）
+- **多语言识别** — 本地支持 17 种语言 + 自动检测，云端支持 100+ 种
+- **语音合成** — AI 回答自动朗读，高风险操作语音解释并等待确认
 
-### 👁️ 视觉理解
-- **屏幕内容分析**：理解屏幕上的文字、按钮、图标等元素
-- **图像描述**：上传图像获取详细描述，支持拍照识别
-- **界面元素识别**：识别UI控件并提供语音导航
+### 视觉理解
+- **视觉问答** — 对摄像头画面或屏幕截图提问，AI 用自然语言回答
+- **上下文管理** — 自动维护对话历史、视觉记忆和长期记忆，智能压缩
+- **按需截帧** — 说话时截取当前画面，连同语音一起发送给 AI
 
-### 🤖 智能推理
-- **自适应推理**：根据设备性能自动选择本地或云端推理
-- **离线支持**：无网络时使用本地轻量级模型
-- **模型管理**：自动下载、更新、清理模型文件
+### 桌面自动化
+- **全功能键鼠控制** — 点击、滚动、打字、快捷键、打开/关闭应用、文件操作
+- **风险分级** — 低风险自动执行，高风险语音解释原因后等待用户确认
+- **结构化操作** — AI 通过 Function Calling 返回可执行的操作指令
 
-### 🔧 配置管理
-- **用户偏好设置**：语言、主题、字体大小等个性化配置
-- **云端API配置**：支持 OpenAI、Anthropic 等多种云端服务
-- **推理模式选择**：本地/云端/自适应三种模式可选
+### 跨平台
+- **云端 + 本地** — 复杂任务走云端 API，简单任务本地离线处理
+- **自适应推理** — 根据设备性能和网络状态自动选择最佳推理方式
+- **共享代码** — 桌面和 Android 共享 Rust 核心库 + Slint UI
 
-## 🚀 快速开始
+## 快速开始
 
-### 📦 下载安装
+### 下载安装
 
-从 [Releases](https://github.com/ale-my-eyes/ale-my-eyes/releases) 页面下载适合您平台的安装包：
+从 [Releases](https://github.com/Risaly-Noroki-Dev-Club/ale-my-eyes/releases) 页面下载：
 
-- **Windows**: `ale-my-eyes-windows.zip`
-- **Linux**: `ale-my-eyes-linux.tar.gz`
+- **Windows**: `ale-my-eyes-windows.exe`
+- **Linux**: `ale-my-eyes_0.1.0_amd64.deb`
 - **Android**: `ale-my-eyes-android.apk`
 
-### ⚙️ 配置 API 密钥
+### 配置 API 密钥
 
-1. 打开配置文件 `config/config.json`
-2. 设置您的 OpenAI API 密钥：
+1. 打开应用，进入 **设置** 页面
+2. 填写 API Key（OpenAI 或兼容接口）
+3. API URL 默认 `https://api.openai.com/v1`，可改为 OpenRouter、Azure 等
+4. 点击 **测试连接** 验证配置
 
-```json
-{
-  "cloud_api": {
-    "provider": "openai",
-    "api_key": "sk-your-api-key-here",
-    "api_url": "https://api.openai.com/v1",
-    "model": "gpt-4o"
-  }
-}
-```
+### 启动使用
 
-### 🎮 启动使用
-
-#### Windows
-```cmd
-# 启动服务器
-start-server.bat
-
-# 启动图形界面
-start-gui.bat
-```
-
-#### Linux
 ```bash
-# 启动服务器
-./start-server.sh
+# 桌面 GUI
+cargo run -p ale-gui
 
-# 启动图形界面
-./start-gui.sh
+# 命令行
+cargo run -p ale-cli -- transcribe --audio input.wav
 ```
 
-#### Android
-1. 安装 APK 文件
-2. 打开应用，输入 API 密钥
-3. 开始使用语音交互功能
+## 技术架构
 
-## 🏗️ 技术架构
-
-### 📁 项目结构
+### 项目结构
 
 ```
-ale-my-eyes/
-├── ale-core/                    # 核心库
-│   ├── cloud.rs                # 云端API集成
-│   ├── inference.rs            # 推理引擎
-│   ├── downloader.rs           # 模型下载器
-│   ├── manager.rs              # 模型管理器
-│   └── config.rs               # 配置系统
-├── ale-server/                  # 后端服务器
-├── ale-cli/                     # 命令行工具
-├── ale-gui/                     # 图形界面
-├── scripts/                     # 构建脚本
-│   ├── package-windows.sh      # Windows 打包
-│   ├── package-linux.sh        # Linux 打包
-│   └── package-android.sh      # Android 打包
-└── Cargo.toml                   # 项目配置
+ale-my-eyes-rust/
+├── ale-core/                  # 核心库
+│   ├── src/
+│   │   ├── lib.rs             # AleEngine 主入口
+│   │   ├── cloud.rs           # 云端 API（OpenAI 兼容 + Function Calling）
+│   │   ├── inference.rs       # 自适应推理引擎
+│   │   ├── vad.rs             # 语音活动检测（VAD）
+│   │   ├── actions.rs         # 操作指令协议（11 种操作 + 风险分级）
+│   │   ├── context.rs         # 上下文管理（对话/视觉/长期记忆）
+│   │   ├── config.rs          # 配置系统
+│   │   ├── asr.rs             # 本地 ASR（whisper-rs）
+│   │   ├── vlm.rs             # 本地 VLM
+│   │   ├── llm.rs             # 本地 LLM
+│   │   ├── tts.rs             # 系统 TTS
+│   │   ├── downloader.rs      # 模型下载器
+│   │   └── manager.rs         # 模型管理器
+│   └── Cargo.toml
+├── ale-cli/                   # 命令行工具
+├── ale-gui/                   # 跨平台 GUI (Slint)
+│   ├── ui/
+│   │   ├── app.slint          # 主窗口 + 导航
+│   │   ├── main-screen.slint  # 移动端主界面
+│   │   ├── desktop-screen.slint # 桌面浮动窗口
+│   │   ├── settings-screen.slint
+│   │   ├── diagnostics-screen.slint
+│   │   └── widgets.slint      # 通用组件库
+│   └── src/
+│       ├── lib.rs             # 共享逻辑 + AppState
+│       ├── main.rs            # 桌面入口
+│       ├── android.rs         # Android 入口
+│       ├── audio.rs           # 录音（cpal / oboe）
+│       ├── camera.rs          # Android 相机（JNI Camera2）
+│       ├── screen_capture.rs  # 桌面屏幕截图（xcap）
+│       ├── automation.rs      # 桌面键鼠自动化（enigo）
+│       ├── file_picker.rs     # 文件选择
+│       └── tts_player.rs      # TTS 播放
+├── scripts/                   # 构建/打包脚本
+└── Cargo.toml
 ```
 
-### 🔧 技术栈
+### 核心模块
 
-- **后端**: Rust + Axum + Tokio
-- **语音识别**: Whisper (本地) + OpenAI Whisper API (云端)
-- **语音合成**: Piper TTS (本地) + OpenAI TTS API (云端)
-- **视觉理解**: OpenAI GPT-4o Vision API
-- **GUI**: iced (跨平台桌面应用)
-- **构建**: Cargo + cargo-ndk (Android)
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| VAD | `ale-core/src/vad.rs` | 能量检测 + 状态机，自适应阈值 |
+| Actions | `ale-core/src/actions.rs` | 11 种操作类型，3 级风险评估 |
+| Context | `ale-core/src/context.rs` | 对话历史 + 视觉记忆 + 长期记忆，自动压缩 |
+| Vision API | `ale-core/src/cloud.rs` | 自定义问题 + Function Calling |
+| Screen Capture | `ale-gui/src/screen_capture.rs` | 持续/按需截图，缩放，JPEG 编码 |
+| Automation | `ale-gui/src/automation.rs` | 鼠标/键盘/文件/URL/应用操作 |
+| Camera | `ale-gui/src/camera.rs` | Android Camera2 JNI + YUV→RGBA |
 
-### 📊 推理策略
+### 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| GUI 框架 | Slint 1.16（跨平台声明式 UI） |
+| 本地 ASR | whisper-rs 0.16（whisper.cpp FFI） |
+| 云端 ASR | OpenAI Whisper API |
+| 视觉理解 | OpenAI GPT-4o Vision + Function Calling |
+| 桌面截屏 | xcap 0.9（X11/Wayland/Windows/macOS） |
+| 键鼠控制 | enigo 0.6（X11/Wayland/Windows/macOS） |
+| Android 相机 | JNI Camera2 API |
+| 桌面音频 | cpal + rodio |
+| Android 音频 | oboe + JNI MediaPlayer |
+
+### 数据流
 
 ```
-用户设备检测
-├── 低端设备 (联发科/赛扬)
-│   ├── 网络良好 → 云端API (GPT-4o)
-│   └── 网络差/离线 → 本地轻量模型
-├── 中端设备 (i5/Ryzen5)
-│   └── 智能选择 → 根据任务复杂度切换
-└── 高端设备 (i7/Ryzen7)
-    └── 优先使用高质量模型
+┌─────────────────────────────────────────────────────────┐
+│  Android: 相机帧 + 语音 ──┐                              │
+│                           ├→ 云端 API (GPT-4o)          │
+│  Desktop: 屏幕截图 + 语音 ─┘   ├→ 语音转文字 (Whisper)   │
+│                                ├→ 视觉问答 (Vision)      │
+│                                └→ 操作指令 (Function Call)│
+│                                         │                │
+│                    ┌────────────────────┘                │
+│                    ▼                                      │
+│  Android: TTS 朗读回答 + 显示文字                         │
+│  Desktop:  TTS 朗读 + 执行键鼠操作（高风险需确认）        │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## 🛠️ 开发指南
+## 相关项目
 
-### 📋 环境要求
+- **[ale-server](https://github.com/Risaly-Noroki-Dev-Club/ale-server)** — HTTP API 服务器（独立项目）
 
-- **Rust**: 1.70.0 或更高版本
-- **Cargo**: 包管理器
+## 开发指南
+
+### 环境要求
+
+- **Rust**: 1.70.0+
 - **系统依赖**:
+  - Linux: `libasound2-dev libfontconfig-dev libspeechd-dev libpipewire-0.3-dev libwayland-dev libxrandr-dev libdbus-1-dev libegl-dev libgbm-dev libxcb-shape0-dev libxcb-xfixes0-dev libclang-dev`
   - Windows: Visual Studio Build Tools
-  - Linux: `libspeechd-dev`, `libasound2-dev`
-  - Android: Android NDK 25+
+  - Android: Android NDK 25+, `cargo-apk`
 
-### 🔨 从源码构建
+### 构建
 
-#### 克隆仓库
 ```bash
-git clone https://github.com/ale-my-eyes/ale-my-eyes.git
+git clone https://github.com/Risaly-Noroki-Dev-Club/ale-my-eyes.git
 cd ale-my-eyes
-```
 
-#### 构建 Windows 版本
-```bash
-./scripts/package-windows.sh
-```
+# 桌面构建
+cargo build --release -p ale-gui
 
-#### 构建 Linux 版本
-```bash
-./scripts/package-linux.sh
-```
+# 带本地推理支持
+cargo build --release -p ale-core --features local-inference
 
-#### 构建 Android 版本
-```bash
-# 设置 Android NDK 路径
+# Android 构建
 export ANDROID_NDK_ROOT=/path/to/android-ndk
-
-# 运行打包脚本
 ./scripts/package-android.sh
 ```
 
-### 🧪 运行测试
+### 常用命令
+
 ```bash
-# 运行所有测试
-cargo test
-
-# 运行特定模块测试
-cargo test -p ale-core
+cargo check --workspace                    # 检查整个 workspace
+cargo fmt && cargo clippy --workspace      # 格式化 + lint
+cargo test -p ale-core                     # 运行核心库测试
+cargo run -p ale-gui                       # 启动桌面 GUI
 ```
 
-### 📝 代码格式化
-```bash
-# 格式化代码
-cargo fmt
+### 发布
 
-# 检查代码风格
-cargo clippy
-```
+GitHub Actions 自动构建。推送 `v*` 标签或手动触发 workflow 会发布：
 
-## 📚 使用教程
+- `ale-my-eyes-windows.exe` (Windows)
+- `ale-my-eyes_0.1.0_amd64.deb` (Linux)
+- `ale-my-eyes-android.apk` (Android)
 
-### 🎤 基础语音交互
+## 许可证
 
-#### 1. 语音识别
-```rust
-use ale_core::AleEngineFactory;
+MIT License - 查看 [LICENSE](LICENSE)
 
-let engine = AleEngineFactory::create_default().await?;
+## 致谢
 
-// 录制音频并识别
-let audio_data = record_audio()?;
-let text = engine.transcribe(&audio_data).await?;
-println!("识别结果: {}", text);
-```
-
-#### 2. 语音合成
-```rust
-// 将文本转换为语音
-let audio = engine.synthesize("欢迎使用 Ale, My Eyes!").await?;
-play_audio(audio)?;
-```
-
-#### 3. 图像描述
-```rust
-// 描述屏幕内容或上传的图像
-let image_data = capture_screen()?;
-let description = engine.describe_image(&image_data).await?;
-println!("图像描述: {}", description);
-```
-
-### 🔧 高级配置
-
-#### 自定义推理模式
-```json
-{
-  "inference": {
-    "mode": "adaptive",  // "local", "cloud", "adaptive"
-    "prefer_cloud": true,
-    "timeout": 30,
-    "fallback_to_local": true
-  }
-}
-```
-
-#### 模型管理配置
-```json
-{
-  "models": {
-    "auto_download": true,
-    "max_download_size": 524288000,  // 500MB
-    "preferred_quality": "balanced",  // "low", "balanced", "high"
-    "offline_mode": false
-  }
-}
-```
-
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 🙏 致谢
-
-- [Whisper](https://github.com/openai/whisper) - 语音识别模型
-- [Piper](https://github.com/rhasspy/piper) - 语音合成模型
-- [OpenAI](https://openai.com/) - 云端API服务
-- [iced](https://github.com/iced-rs/iced) - 跨平台GUI框架
-- [Axum](https://github.com/tokio-rs/axum) - Web框架
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) - 本地语音识别引擎
+- [whisper-rs](https://github.com/tazz4843/whisper-rs) - Rust FFI 绑定
+- [OpenAI](https://openai.com/) - 云端 API
+- [Slint](https://slint.dev/) - 跨平台 UI 框架
+- [xcap](https://github.com/nashaofu/xcap) - 跨平台屏幕截图
+- [enigo](https://github.com/enigo-rs/enigo) - 键鼠自动化
 - [水素&lin] - 最初的动力
-## 📞 联系我们
 
-- **项目主页**: [https://github.com/ale-my-eyes/ale-my-eyes](https://github.com/ale-my-eyes/ale-my-eyes)
-- **问题反馈**: [GitHub Issues](https://github.com/ale-my-eyes/ale-my-eyes/issues)
+## 联系
+
+- **项目主页**: [github.com/Risaly-Noroki-Dev-Club/ale-my-eyes](https://github.com/Risaly-Noroki-Dev-Club/ale-my-eyes)
+- **问题反馈**: [GitHub Issues](https://github.com/Risaly-Noroki-Dev-Club/ale-my-eyes/issues)
 - **邮箱**: erika@risnordev.org
