@@ -125,27 +125,3 @@ jobs:
           name: ale-my-eyes-android
           path: ale-my-eyes-android.apk
 
-  release:
-    name: Publish GitHub release
-    needs: [build-windows, build-linux, build-android]
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.release_tag || format('manual-{0}', github.run_number)) || github.ref_name }}
-          name: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.release_tag || format('manual-{0}', github.run_number)) || github.ref_name }}
-          files: |
-            artifacts/ale-my-eyes-windows/ale-my-eyes-windows.exe
-            artifacts/ale-my-eyes-linux/ale-my-eyes_0.1.0_amd64.deb
-            artifacts/ale-my-eyes-android/ale-my-eyes-android.apk
-          draft: false
-          prerelease: false
